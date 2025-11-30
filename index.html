@@ -4,18 +4,38 @@
     <meta charset="UTF-8">
     <title>DX簡易診断</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- PDF.js の読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.133/pdf.min.js"></script>
 </head>
 <body>
-    <h1>DX診断ツール</h1>
+    <h1>DX簡易診断ツール</h1>
 
-    <p>社内の課題が書かれたPDFまたは文章をアップロードしてください。</p>
-    <input type="file" id="fileInput" accept=".pdf,.txt">
+    <!-- ファイルアップロード -->
+    <p>社内課題が書かれたTXTまたはPDFファイルをアップロードしてください：</p>
+    <input type="file" id="fileInput" accept=".txt,.pdf">
+
+    <!-- 一問一答 -->
+    <p>問1：業務を効率化するシステムを導入していますか？</p>
+    <select id="q1">
+        <option value="0">以前から複数導入しており有効活用できている</option>
+        <option value="1">以前から導入しているが、あまり活用できていない</option>
+        <option value="2">導入できていない</option>
+    </select>
+
+    <p>問2：IT導入補助金をどれだけ知っていますか？</p>
+    <select id="q2">
+        <option value="0">複数認知しており活用している</option>
+        <option value="1">活用はできていないが認知できている</option>
+        <option value="2">認知できていない</option>
+    </select><br><br>
 
     <button id="analyzeBtn">診断する</button>
 
+    <!-- 結果表示 -->
     <h2>診断結果</h2>
     <div id="resultBox"></div>
 
     <script src="app.js"></script>
 </body>
 </html>
+
