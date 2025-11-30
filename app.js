@@ -57,17 +57,20 @@ document.getElementById("analyzeBtn").addEventListener("click", async () => {
     // 一問一答スコア
     const q1 = parseInt(document.getElementById("q1").value);
     const q2 = parseInt(document.getElementById("q2").value);
+    const q3 = parseInt(document.getElementById("q3").value);
 
-    score += q1 + q2;
+    score += q1 + q2 + q3;
 
     if(q1 === 1) advice.push("導入済みのシステムを活用できる体制を整えましょう。");
     if(q1 === 2) advice.push("システム導入を検討しましょう。");
     if(q2 === 1) advice.push("補助金の活用方法を具体的に検討しましょう。");
     if(q2 === 2) advice.push("IT導入補助金を調べて活用できるようにしましょう。");
+    if(q3 === 1) advice.push("IT研修をもう少し定期的に行うことを検討しましょう。");
+    if(q3 === 2) advice.push("スタッフ向けIT研修を計画的に実施しましょう。");
 
     // スコアに応じて色分け
-    if(score <= 3) resultBox.className = "low";
-    else if(score <= 6) resultBox.className = "medium";
+    if(score <= 4) resultBox.className = "low";
+    else if(score <= 7) resultBox.className = "medium";
     else resultBox.className = "high";
 
     // 結果表示
