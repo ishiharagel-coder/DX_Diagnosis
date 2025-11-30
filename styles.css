@@ -1,0 +1,17 @@
+body {
+    font-family: sans-serif;
+    padding: 30px;
+    max-width: 700px;
+    margin: auto;
+}
+
+h1 {
+    color: #1a73e8;
+}
+
+#resultBox {
+    padding: 20px;
+    margin-top: 20px;
+    background: #f1f3f4;
+    border-radius: 8px;
+}
