@@ -1,48 +1,736 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <title>DX簡易診断</title>
-    <link rel="stylesheet" href="styles.css">
-    <!-- PDF.js の読み込み -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.133/pdf.min.js"></script>
+  <meta charset="UTF-8">
+  <title>DX簡易診断ツール</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- PDF.js（PDFのテキスト抽出用） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+    /* ===== 全体レイアウト ===== */
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 24px 16px 40px;
+      color: #111827;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+      font-size: 24px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 20px;
+    }
+
+    /* ===== アップロードカード ===== */
+    .upload-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05);
+      border: 1px solid #e5e7eb;
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .upload-title {
+      font-weight: 600;
+      margin: 0 0 4px;
+      font-size: 15px;
+    }
+
+    .upload-desc {
+      font-size: 12px;
+      color: #6b7280;
+      margin: 0 0 10px;
+    }
+
+    #fileInput {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    #fileStatus {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    /* ===== ステッパー（進捗表示） ===== */
+    .stepper {
+      margin-bottom: 16px;
+    }
+
+    .step-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .step-bar {
+      width: 100%;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .step-bar-inner {
+      height: 100%;
+      width: 0%;
+      background: #4f46e5;
+      transition: width 0.25s ease;
+    }
+
+    /* ===== ステップ（ページ） ===== */
+    .step {
+      display: none;
+    }
+
+    .step.is-active {
+      display: block;
+    }
+
+    /* ===== 質問カード ===== */
+    .question-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px 18px 14px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e5e7eb;
+      margin-bottom: 16px;
+    }
+
+    .question-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .question-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .question-title {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .question-desc {
+      font-size: 13px;
+      color: #6b7280;
+      margin: 4px 0 10px;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      padding: 10px 12px;
+      background: #f9fafb;
+      font-size: 14px;
+      cursor: pointer;
+      line-height: 1.4;
+      transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        box-shadow 0.15s ease,
+        transform 0.05s ease;
+    }
+
+    .option-btn:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.18);
+      transform: translateY(-1px);
+    }
+
+    .option-btn.is-selected {
+      background: #4f46e5;
+      color: #ffffff;
+      border-color: #4f46e5;
+      box-shadow: 0 4px 18px rgba(79, 70, 229, 0.45);
+    }
+
+    /* ===== ナビゲーションボタン ===== */
+    .step-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      border-radius: 999px;
+      border: none;
+      padding: 10px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition:
+        opacity 0.12s ease,
+        transform 0.05s ease,
+        box-shadow 0.12s ease;
+    }
+
+    .nav-prev {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .nav-next {
+      background: #4f46e5;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+    }
+
+    .nav-analyze {
+      background: #10b981;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+    }
+
+    .nav-btn:hover {
+      opacity: 0.95;
+      transform: translateY(-1px);
+    }
+
+    .nav-btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    /* ===== 結果表示 ===== */
+    .result-section {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px 18px 14px;
+      box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
+      border: 1px solid #e5e7eb;
+    }
+
+    .result-title {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+
+    .badge-level {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .badge-good {
+      background: #ecfdf3;
+      color: #16a34a;
+    }
+
+    .badge-mid {
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .badge-low {
+      background: #fef2f2;
+      color: #b91c1c;
+    }
+
+    .result-text {
+      font-size: 14px;
+      color: #4b5563;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+
+    .result-note {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .result-keywords {
+      font-size: 12px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 16px 10px 32px;
+      }
+
+      .question-card {
+        padding: 14px 14px 12px;
+      }
+
+      .question-title {
+        font-size: 15px;
+      }
+
+      .option-btn {
+        font-size: 13px;
+      }
+
+      .step-nav {
+        flex-direction: column-reverse;
+      }
+
+      .nav-btn {
+        width: 100%;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="container">
     <h1>DX簡易診断ツール</h1>
+    <p class="subtitle">社内課題のPDF/TXTと5つの質問から、貴社のDXの現在地をチェックします。</p>
 
-    <!-- ファイルアップロード -->
-    <p>社内課題が書かれたTXTまたはPDFファイルをアップロードしてください：</p>
-    <input type="file" id="fileInput" accept=".txt,.pdf">
+    <!-- アップロードエリア -->
+    <div class="upload-card">
+      <p class="upload-title">1. 社内課題ファイルのアップロード（任意）</p>
+      <p class="upload-desc">
+        社内の課題や現状が書かれた PDF / TXT ファイルをアップロードしてください。<br>
+        ファイル内のキーワードを簡易的に分析し、診断結果に少し反映します。
+      </p>
+      <input type="file" id="fileInput" accept=".pdf,.txt">
+      <div id="fileStatus">ファイルは未選択です。</div>
+    </div>
 
-    <!-- 一問一答 -->
-    <p>問1：業務を効率化するシステムを導入していますか？</p>
-    <select id="q1">
-        <option value="0">以前から複数導入しており有効活用できている</option>
-        <option value="1">以前から導入しているが、あまり活用できていない</option>
-        <option value="2">導入できていない</option>
-    </select>
+    <!-- ステップ表示 -->
+    <div class="stepper">
+      <div id="stepLabel" class="step-label">ステップ 1 / 5</div>
+      <div class="step-bar">
+        <div id="stepBarInner" class="step-bar-inner"></div>
+      </div>
+    </div>
 
-    <p>問2：IT導入補助金をどれだけ知っていますか？</p>
-    <select id="q2">
-        <option value="0">複数認知しており活用している</option>
-        <option value="1">活用はできていないが認知できている</option>
-        <option value="2">認知できていない</option>
-    </select>
+    <!-- ステップ1 -->
+    <div class="step is-active" data-step="1">
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-badge">Q1</span>
+          <h2 class="question-title">業務を効率化するシステムを導入していますか？</h2>
+        </div>
+        <p class="question-desc">普段利用しているシステムの数や活用度合いに近いものを選んでください。</p>
 
-    <p>問3：スタッフのITスキル研修・教育の実施状況はいかがですか？</p>
-    <select id="q3">
-        <option value="0">定期的なIT研修＋外部セミナー参加を積極推進</option>
-        <option value="1">年1～2回程度、社内でIT関連の勉強会を実施</option>
-        <option value="2">新しいシステム導入時のみ研修を実施</option>
-    </select><br><br>
-    
-    <button id="analyzeBtn">診断する</button>
+        <div class="option-group">
+          <button class="option-btn is-selected" data-question="q1" data-value="0">
+            以前から複数導入しており有効活用できている
+          </button>
+          <button class="option-btn" data-question="q1" data-value="1">
+            以前から導入しているが、あまり活用できていない
+          </button>
+          <button class="option-btn" data-question="q1" data-value="2">
+            導入できていない
+          </button>
+        </div>
+      </div>
+    </div>
 
-    <!-- 結果表示 -->
-    <h2>診断結果</h2>
-    <div id="resultBox"></div>
+    <!-- ステップ2 -->
+    <div class="step" data-step="2">
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-badge">Q2</span>
+          <h2 class="question-title">IT導入補助金をどれだけ知っていますか？</h2>
+        </div>
+        <p class="question-desc">補助金・助成金の情報収集や活用状況に近いものを選んでください。</p>
 
-    <script src="app.js"></script>
+        <div class="option-group">
+          <button class="option-btn is-selected" data-question="q2" data-value="0">
+            複数認知しており活用している
+          </button>
+          <button class="option-btn" data-question="q2" data-value="1">
+            活用はできていないが認知できている
+          </button>
+          <button class="option-btn" data-question="q2" data-value="2">
+            認知できていない
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ3 -->
+    <div class="step" data-step="3">
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-badge">Q3</span>
+          <h2 class="question-title">スタッフのITスキル研修・教育の実施状況はいかがですか？</h2>
+        </div>
+        <p class="question-desc">普段どのくらいIT研修の機会を設けているか、イメージに近いものを選んでください。</p>
+
+        <div class="option-group">
+          <button class="option-btn is-selected" data-question="q3" data-value="0">
+            定期的なIT研修＋外部セミナー参加を積極推進
+          </button>
+          <button class="option-btn" data-question="q3" data-value="1">
+            年1～2回程度、社内でIT関連の勉強会を実施
+          </button>
+          <button class="option-btn" data-question="q3" data-value="2">
+            新しいシステム導入時のみ研修を実施
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ4（質問追加1） -->
+    <div class="step" data-step="4">
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-badge">Q4</span>
+          <h2 class="question-title">顧客データや業務データはどのように管理していますか？</h2>
+        </div>
+        <p class="question-desc">データの蓄積方法・管理方法に最も近いものを選んでください。</p>
+
+        <div class="option-group">
+          <button class="option-btn is-selected" data-question="q4" data-value="0">
+            クラウドシステム等で一元管理し、分析にも活用している
+          </button>
+          <button class="option-btn" data-question="q4" data-value="1">
+            Excelやローカルフォルダで管理しているが、部署ごとにバラバラ
+          </button>
+          <button class="option-btn" data-question="q4" data-value="2">
+            紙や担当者個人の管理に依存している
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステップ5（質問追加2） -->
+    <div class="step" data-step="5">
+      <div class="question-card">
+        <div class="question-header">
+          <span class="question-badge">Q5</span>
+          <h2 class="question-title">DX推進の体制について、最も近いものはどれですか？</h2>
+        </div>
+        <p class="question-desc">専任担当者やプロジェクト、社内での位置づけに近いものを選んでください。</p>
+
+        <div class="option-group">
+          <button class="option-btn is-selected" data-question="q5" data-value="0">
+            専任担当やプロジェクトチームがあり、計画的に推進している
+          </button>
+          <button class="option-btn" data-question="q5" data-value="1">
+            兼任担当者はいるが、明確な計画や体制はこれから
+          </button>
+          <button class="option-btn" data-question="q5" data-value="2">
+            特に担当者や体制は決まっていない
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ナビゲーション -->
+    <div class="step-nav">
+      <button id="prevBtn" class="nav-btn nav-prev">戻る</button>
+      <button id="nextBtn" class="nav-btn nav-next">次へ</button>
+      <button id="analyzeBtn" class="nav-btn nav-analyze">診断する</button>
+    </div>
+
+    <!-- 診断結果 -->
+    <div id="resultSection" class="result-section" style="display:none;">
+      <h2 class="result-title">診断結果</h2>
+      <div id="resultBadge"></div>
+      <p id="resultText" class="result-text"></p>
+      <div id="resultKeywords" class="result-keywords"></div>
+      <p class="result-note">※本診断はあくまで簡易的な目安です。実際の状況に応じて専門家への相談もご検討ください。</p>
+    </div>
+  </div>
+
+  <script>
+    // ===== PDF.js のワーカー設定（CDNから利用） =====
+    if (window["pdfjsLib"]) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    }
+
+    // ===== アップロードされたテキスト／PDFの内容 =====
+    let uploadedText = "";
+    let fileAnalysis = {
+      negHits: [],
+      posHits: [],
+      scoreAdjust: 0,
+    };
+
+    const fileInput = document.getElementById("fileInput");
+    const fileStatus = document.getElementById("fileStatus");
+
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      uploadedText = "";
+      fileAnalysis = { negHits: [], posHits: [], scoreAdjust: 0 };
+
+      if (!file) {
+        fileStatus.textContent = "ファイルは未選択です。";
+        return;
+      }
+
+      const name = file.name;
+      const ext = name.split(".").pop().toLowerCase();
+
+      if (ext === "txt") {
+        const reader = new FileReader();
+        fileStatus.textContent = "TXTファイルを読み込んでいます…";
+        reader.onload = () => {
+          uploadedText = reader.result || "";
+          analyzeTextKeywords();
+          fileStatus.textContent = "TXTファイルを読み込みました。キーワードを簡易解析しました。";
+        };
+        reader.readAsText(file, "utf-8");
+      } else if (ext === "pdf") {
+        if (!window["pdfjsLib"]) {
+          fileStatus.textContent = "PDF解析ライブラリの読み込みに失敗しました。別のブラウザをお試しください。";
+          return;
+        }
+        fileStatus.textContent = "PDFを読み込んでいます…（ページ数によっては少し時間がかかります）";
+
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const typedArray = new Uint8Array(reader.result);
+            const pdf = await pdfjsLib.getDocument({ data: typedArray }).promise;
+            let allText = "";
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const strings = content.items.map((item) => item.str);
+              allText += strings.join(" ") + "\n";
+            }
+
+            uploadedText = allText;
+            analyzeTextKeywords();
+            fileStatus.textContent = `PDFを読み込みました。（${pdf.numPages}ページ／キーワードを簡易解析しました）`;
+          } catch (e) {
+            console.error(e);
+            fileStatus.textContent = "PDFの読み込みに失敗しました。別のファイルでお試しください。";
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      } else {
+        fileStatus.textContent = "対応している形式は PDF / TXT のみです。";
+      }
+    });
+
+    // ===== アップロードテキストの簡易キーワード解析 =====
+    function analyzeTextKeywords() {
+      if (!uploadedText) {
+        fileAnalysis = { negHits: [], posHits: [], scoreAdjust: 0 };
+        return;
+      }
+
+      const text = uploadedText;
+
+      const negativeWords = [
+        "紙",
+        "手書き",
+        "手作業",
+        "FAX",
+        "ファックス",
+        "押印",
+        "ハンコ",
+        "Excel管理",
+        "エクセル管理",
+        "属人化"
+      ];
+
+      const positiveWords = [
+        "クラウド",
+        "SaaS",
+        "システム",
+        "自動化",
+        "API連携",
+        "データ分析",
+        "DX",
+        "RPA"
+      ];
+
+      const negHits = negativeWords.filter((w) => text.includes(w));
+      const posHits = positiveWords.filter((w) => text.includes(w));
+
+      let scoreAdjust = 0;
+      if (negHits.length > 0) {
+        scoreAdjust += Math.min(2, negHits.length); // アナログ要素が多いほど +（DX度合いを下げる）
+      }
+      if (posHits.length > 0) {
+        scoreAdjust -= Math.min(2, posHits.length); // DXワードが多いほど -（DX度合いを上げる）
+      }
+
+      fileAnalysis = { negHits, posHits, scoreAdjust };
+    }
+
+    // ===== 質問の選択状態管理 =====
+    const answers = {
+      q1: 0,
+      q2: 0,
+      q3: 0,
+      q4: 0,
+      q5: 0,
+    };
+
+    const optionButtons = document.querySelectorAll(".option-btn");
+    optionButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const qId = btn.dataset.question;
+        const value = Number(btn.dataset.value);
+
+        const card = btn.closest(".question-card");
+        card.querySelectorAll(".option-btn").forEach((b) => {
+          b.classList.remove("is-selected");
+        });
+
+        btn.classList.add("is-selected");
+        answers[qId] = value;
+      });
+    });
+
+    // ===== ステップ遷移管理 =====
+    const steps = Array.from(document.querySelectorAll(".step"));
+    const totalSteps = steps.length;
+    let currentStepIndex = 0;
+
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const analyzeBtn = document.getElementById("analyzeBtn");
+
+    const stepLabel = document.getElementById("stepLabel");
+    const stepBarInner = document.getElementById("stepBarInner");
+
+    function updateStepView() {
+      steps.forEach((step, index) => {
+        step.classList.toggle("is-active", index === currentStepIndex);
+      });
+
+      stepLabel.textContent = `ステップ ${currentStepIndex + 1} / ${totalSteps}`;
+
+      const percent = (currentStepIndex / (totalSteps - 1)) * 100;
+      stepBarInner.style.width = percent + "%";
+
+      prevBtn.style.display = currentStepIndex === 0 ? "none" : "inline-flex";
+      nextBtn.style.display =
+        currentStepIndex === totalSteps - 1 ? "none" : "inline-flex";
+      analyzeBtn.style.display =
+        currentStepIndex === totalSteps - 1 ? "inline-flex" : "none";
+    }
+
+    prevBtn.addEventListener("click", () => {
+      if (currentStepIndex > 0) {
+        currentStepIndex--;
+        updateStepView();
+      }
+    });
+
+    nextBtn.addEventListener("click", () => {
+      if (currentStepIndex < totalSteps - 1) {
+        currentStepIndex++;
+        updateStepView();
+      }
+    });
+
+    // ===== 診断ロジック =====
+    const resultSection = document.getElementById("resultSection");
+    const resultBadge = document.getElementById("resultBadge");
+    const resultText = document.getElementById("resultText");
+    const resultKeywords = document.getElementById("resultKeywords");
+
+    analyzeBtn.addEventListener("click", () => {
+      const baseTotal =
+        Number(answers.q1) +
+        Number(answers.q2) +
+        Number(answers.q3) +
+        Number(answers.q4) +
+        Number(answers.q5);
+
+      // PDF/TXTからの補正（アナログワード多い → +、DXワード多い → -）
+      const pdfAdjust = fileAnalysis.scoreAdjust || 0;
+      const total = baseTotal + pdfAdjust;
+
+      let level, badgeClass, text;
+
+      // 質問5問なので、理論最低0〜最大10＋補正程度を想定
+      if (total <= 2) {
+        level = "DXレベル：先進層（かなり進んでいます）";
+        badgeClass = "badge-level badge-good";
+        text =
+          "業務システムの活用、補助金の認知・活用、データ管理、体制づくりなど、全体としてDXが進んでいる状態です。既に進んでいる取り組みの効果検証や、データ活用の高度化など、次のステージを見据えた投資・改善が有効です。";
+      } else if (total <= 5) {
+        level = "DXレベル：中間層（これから伸ばせる段階）";
+        badgeClass = "badge-level badge-mid";
+        text =
+          "一部ではシステム導入や研修・体制づくりが始まっている一方で、活用方法や全体設計はまだ伸びしろがある状態です。既に導入している仕組みを整理し、部門横断の視点で「どこを優先的にデジタル化するか」を決めていくと、効率よくDXを進められます。";
+      } else {
+        level = "DXレベル：これから層（まずは一歩目から）";
+        badgeClass = "badge-level badge-low";
+        text =
+          "現状では、システム導入やデータの一元管理、体制づくりなどが十分とは言えない状態かもしれません。いきなり大規模なDXを目指すのではなく、「紙やExcelの業務を一つクラウド化する」「小さなDXプロジェクトを1つ立ち上げる」など、現場に近いところから小さく始めるのがおすすめです。";
+      }
+
+      resultBadge.className = badgeClass;
+      resultBadge.textContent = level;
+      resultText.textContent = text;
+
+      // キーワードの表示
+      if (fileAnalysis.negHits.length || fileAnalysis.posHits.length) {
+        const negText = fileAnalysis.negHits.length
+          ? "アナログ寄りのキーワード（例：" +
+            fileAnalysis.negHits.join("・") +
+            "）が見られました。"
+          : "";
+        const posText = fileAnalysis.posHits.length
+          ? "DX寄りのキーワード（例：" +
+            fileAnalysis.posHits.join("・") +
+            "）が見られました。"
+          : "";
+        resultKeywords.textContent =
+          "アップロードされたファイルの傾向：" +
+          [negText, posText].filter(Boolean).join(" ");
+      } else if (uploadedText) {
+        resultKeywords.textContent =
+          "アップロードされたファイルから明確なDX／アナログ傾向キーワードは多く見られませんでした。";
+      } else {
+        resultKeywords.textContent =
+          "ファイルはアップロードされていないため、診断は質問への回答のみを元にしています。";
+      }
+
+      resultSection.style.display = "block";
+      resultSection.scrollIntoView({ behavior: "smooth" });
+    });
+
+    // 初期表示
+    updateStepView();
+  </script>
 </body>
 </html>
-
